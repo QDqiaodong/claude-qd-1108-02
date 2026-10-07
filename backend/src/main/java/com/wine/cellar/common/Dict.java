@@ -21,6 +21,9 @@ public final class Dict {
     /** 状态：在售 / 停售 */
     public static final List<String> WINE_STATUS = List.of("在售", "停售");
 
+    public static final String WINE_ON_SALE = "在售";
+    public static final String WINE_OFF_SHELF = "停售";
+
     // ---------------- 窖藏批次 cellar_batch ----------------
     /** 窖藏批次状态：窖藏中 / 可售 / 已售罄，逐级推进，不可跳级 */
     public static final List<String> CELLAR_BATCH_STATUS = List.of("窖藏中", "可售", "已售罄");
@@ -58,6 +61,17 @@ public final class Dict {
 
     public static boolean isValidWineStatus(String status) {
         return status != null && WINE_STATUS.contains(status);
+    }
+
+    /**
+     * 酒款在售/停售合法转换（仅允许两态间互转，由专门动作接口调用）：
+     *   在售   → 停售：停售（先过在途业务保护）
+     *   停售   → 在售：复售（先过批次/库存资格复核）
+     * 其余一律拒绝，重复提交（同态 → 同态）也不允许。
+     */
+    public static boolean canTransferWine(String from, String to) {
+        return WINE_ON_SALE.equals(from) && WINE_OFF_SHELF.equals(to)
+                || WINE_OFF_SHELF.equals(from) && WINE_ON_SALE.equals(to);
     }
 
     public static boolean isValidCellarBatchStatus(String status) {

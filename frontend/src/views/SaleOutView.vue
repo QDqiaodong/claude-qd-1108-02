@@ -19,12 +19,16 @@ const sellableBatchesOf = (wineId) =>
   batches.value
     .filter(b => b.wineId === wineId && b.status === '可售')
     .sort((a, b) => (a.cellarDate < b.cellarDate ? -1 : a.cellarDate > b.cellarDate ? 1 : a.id - b.id))
-const availableOf = (wineId) => sellableBatchesOf(wineId).reduce((s, b) => s + b.availableBottles, 0)
+// 可售量以后端统一口径 sellableBatchStock 为准（与批次合计同源），本地批次计算仅作兜底
+const availableOf = (wineId) => {
+  const w = wineMap.value[wineId]
+  if (w && typeof w.sellableBatchStock === 'number') return w.sellableBatchStock
+  return sellableBatchesOf(wineId).reduce((s, b) => s + b.availableBottles, 0)
+}
 
-// 可进入出窖选择：在售 + 存在可售批次且有可用瓶数
-const sellableWines = computed(() =>
-  wines.value.filter(w => w.status === '在售' && availableOf(w.id) > 0)
-)
+// 可进入出窖选择：以后端统一资格为准（在售 且 存在可售批次且有可用瓶数），
+// 停售/全批次售罄的酒款在此即不可选，与酒款台账、批次页是同一套资格结果。
+const sellableWines = computed(() => wines.value.filter(w => w.saleEligible === true))
 
 async function load() {
   loading.value = true

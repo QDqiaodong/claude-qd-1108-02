@@ -37,5 +37,13 @@ public interface CellarBatchRepository extends JpaRepository<CellarBatch, Long> 
     @Query("select b from CellarBatch b where b.id = :id")
     Optional<CellarBatch> findLockingById(@Param("id") Long id);
 
+    /**
+     * 行锁读取某酒款的全部批次（复售资格复核时使用：逐批核对状态与库存自洽）。
+     * 与出窖/退窖保持同样的入窖日、id 升序加锁顺序。
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select b from CellarBatch b where b.wineId = :wineId order by b.cellarDate asc, b.id asc")
+    List<CellarBatch> findAllForUpdateByWineId(@Param("wineId") Long wineId);
+
     List<CellarBatch> findByStatus(String status);
 }

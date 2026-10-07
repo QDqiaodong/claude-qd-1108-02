@@ -37,7 +37,7 @@ CREATE TABLE wine (
     type       VARCHAR(16)  NOT NULL COMMENT '类型: 红/白/起泡/甜',
     stock      INT          NOT NULL COMMENT '可售库存（= 各可售批次可用瓶数合计，联动维护）',
     price      DECIMAL(10,2) NOT NULL COMMENT '单价',
-    status     VARCHAR(16)  NOT NULL COMMENT '在售/停售',
+    status     VARCHAR(16)  NOT NULL COMMENT '在售/停售（仅可经 stop-selling/resume-selling 动作切换：停售有在途业务保护，复售须复核批次与库存资格）',
     created_at DATETIME     COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

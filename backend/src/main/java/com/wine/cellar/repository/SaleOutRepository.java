@@ -20,4 +20,12 @@ public interface SaleOutRepository extends JpaRepository<SaleOut, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from SaleOut s where s.id = :id")
     Optional<SaleOut> findLockingById(@Param("id") Long id);
+
+    /**
+     * 行锁按 id 升序锁定一批出窖单（停售保护复查在途业务时使用）。
+     * 锁序「先出窖单（id 升序）后酒款」与退窖一致，杜绝停售 × 退窖交叉死锁。
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from SaleOut s where s.id in :ids order by s.id asc")
+    List<SaleOut> findLockingAllById(@Param("ids") List<Long> ids);
 }

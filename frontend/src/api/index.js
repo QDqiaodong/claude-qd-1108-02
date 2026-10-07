@@ -5,8 +5,13 @@ const http = axios.create({ baseURL: '/api', timeout: 20000 })
 http.interceptors.response.use(
   (response) => response,
   (error) => {
-    const message = error?.response?.data?.message || error?.message || '请求失败'
-    return Promise.reject(new Error(message))
+    const data = error?.response?.data
+    const message = data?.message || error?.message || '请求失败'
+    const e = new Error(message)
+    // 阻断类型与可继续处理的入口（停售/复售保护返回），供页面给出"去处理"跳转
+    e.code = data?.code
+    e.action = data?.action
+    return Promise.reject(e)
   }
 )
 
@@ -31,6 +36,8 @@ export default {
   createWine: (d) => call(http.post('/wines', d)),
   updateWine: (id, d) => call(http.put(`/wines/${id}`, d)),
   reconcileWineStock: (id) => call(http.post(`/wines/${id}/reconcile-stock`)),
+  stopSellingWine: (id) => call(http.post(`/wines/${id}/stop-selling`)),
+  resumeSellingWine: (id) => call(http.post(`/wines/${id}/resume-selling`)),
 
   // ---------------- 窖藏批次 cellar_batch ----------------
   listCellarBatches: (status) => call(http.get('/cellar-batches', params(status ? { status } : {}))),

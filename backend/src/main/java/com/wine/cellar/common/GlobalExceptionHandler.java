@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     /**
-     * 业务校验失败：400 + 中文业务提示
+     * 业务校验失败：400 + 中文业务提示（透传阻断类型与可继续处理入口，供前端一键跳转）
      */
     @ExceptionHandler(BizException.class)
     public ResponseEntity<ApiResponse<Void>> handleBiz(BizException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.fail(e.getMessage()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(e.getMessage(), e.getCode(), e.getAction()));
     }
 
     /**

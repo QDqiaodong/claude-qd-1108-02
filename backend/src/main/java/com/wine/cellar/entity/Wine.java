@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "wine")
@@ -41,4 +42,18 @@ public class Wine {
 
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
+
+    /**
+     * 各「可售」批次可用瓶数合计（资格的唯一真实来源，由服务端按批次实时填充，非持久化列）。
+     * 前台展示的可售量一律取此字段，保证酒款列表、批次页、销售出窖页看到同一结果。
+     */
+    @Transient
+    public Integer sellableBatchStock;
+
+    /**
+     * 是否可进入前台销售选择：在售 且 至少存在一个仍有可用瓶数的可售批次。
+     * 停售/全批次售罄/无放行批次均为 false（非持久化列，服务端统一计算）。
+     */
+    @Transient
+    public Boolean saleEligible;
 }

@@ -73,7 +73,7 @@ onMounted(load)
     </div>
 
     <div class="tip">
-      可用瓶数 = 总瓶数 − 已出窖瓶数；仅「可售」批次的可用瓶数会计入酒款库存，出窖按入窖日最早批次优先扣减。
+      可用瓶数 = 总瓶数 − 已出窖瓶数；仅「可售」批次且酒款在售时才进入前台销售可售量，出窖按入窖日最早批次优先扣减。酒款停售后批次台账保留，复售时会重新核对批次与库存。
     </div>
 
     <div class="grid">
@@ -83,7 +83,16 @@ onMounted(load)
           <el-tag size="small" :type="tagType(b)">{{ b.status }}</el-tag>
         </div>
         <div class="card-body">
-          <div class="row"><span class="k">酒款</span><span class="v">{{ wineMap[b.wineId]?.name || '—' }}</span></div>
+          <div class="row">
+            <span class="k">酒款</span>
+            <span class="v">
+              {{ wineMap[b.wineId]?.name || '—' }}
+              <el-tag
+                v-if="wineMap[b.wineId] && wineMap[b.wineId].status === '停售'"
+                size="small" type="info" effect="plain" class="wine-off-tag"
+              >酒款已停售 · 不计入前台销售</el-tag>
+            </span>
+          </div>
           <div class="row">
             <span class="k">入窖日</span><span class="v">{{ b.cellarDate }}</span>
           </div>
@@ -155,4 +164,5 @@ onMounted(load)
 .card-foot { margin-top: 12px; }
 .muted { color: var(--muted); font-size: 12px; }
 .form-note { font-size: 12px; color: var(--muted); padding-left: 80px; line-height: 1.5; }
+.wine-off-tag { margin-left: 6px; }
 </style>

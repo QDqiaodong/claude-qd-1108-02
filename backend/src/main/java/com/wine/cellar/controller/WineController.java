@@ -48,4 +48,18 @@ public class WineController {
     public ApiResponse<Wine> reconcileStock(@PathVariable Long id) {
         return ApiResponse.success(wineService.reconcileStock(id));
     }
+
+    /** 停售（在售 → 停售）：在途业务保护，存在未完成出窖/待处理退窖明细时整单拒绝并保持原状态 */
+    @PostMapping("/{id}/stop-selling")
+    public ApiResponse<Wine> stopSelling(@PathVariable Long id) {
+        return ApiResponse.success("已停售：前台销售选择、酒款可售标记与批次可售展示已同步生效",
+                wineService.stopSelling(id));
+    }
+
+    /** 复售（停售 → 在售）：重新核对可售批次、库存镜像与批次状态自洽后才恢复销售资格 */
+    @PostMapping("/{id}/resume-selling")
+    public ApiResponse<Wine> resumeSelling(@PathVariable Long id) {
+        return ApiResponse.success("已复售：销售选择已恢复，前台可售量与可售批次合计一致",
+                wineService.resumeSelling(id));
+    }
 }
