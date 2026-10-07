@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.wine.cellar.common.ApiResponse;
 import com.wine.cellar.entity.Wine;
+import com.wine.cellar.service.WineSaleStatusService;
 import com.wine.cellar.service.WineService;
 
 @RestController
@@ -20,9 +21,11 @@ import com.wine.cellar.service.WineService;
 public class WineController {
 
     private final WineService wineService;
+    private final WineSaleStatusService saleStatusService;
 
-    public WineController(WineService wineService) {
+    public WineController(WineService wineService, WineSaleStatusService saleStatusService) {
         this.wineService = wineService;
+        this.saleStatusService = saleStatusService;
     }
 
     @GetMapping
@@ -30,7 +33,10 @@ public class WineController {
             @RequestParam(required = false) String region,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status) {
-        return ApiResponse.success(wineService.list(region, type, status));
+        List<Wine> wines = wineService.list(region, type, status);
+        // 随列表返回同一套可售资格结果：酒款列表 / 批次页 / 销售出窖页看到的一致
+        saleStatusService.fillEligibility(wines);
+        return ApiResponse.success(wines);
     }
 
     @PostMapping
@@ -47,5 +53,25 @@ public class WineController {
     @PostMapping("/{id}/reconcile-stock")
     public ApiResponse<Wine> reconcileStock(@PathVariable Long id) {
         return ApiResponse.success(wineService.reconcileStock(id));
+    }
+
+    /** 停售：存在在途业务（未完成出窖单/待处理退窖明细）时拒绝并保持原状态 */
+    @PostMapping("/{id}/delist")
+    public ApiResponse<Wine> delist(@PathVariable Long id) {
+        Wine w = saleStatusService.delist(id);
+        return ApiResponse.success("酒款已停售：前台销售入口、可售标记与批次可售展示已同步关闭", w);
+    }
+
+    /** 复售：重新核验可售批次/库存镜像/在途冲正，全部通过才恢复销售选择 */
+    @PostMapping("/{id}/relist")
+    public ApiResponse<Wine> relist(@PathVariable Long id) {
+        Wine w = saleStatusService.relist(id);
+        return ApiResponse.success("酒款已复售：销售选择已恢复，可售量与可售批次合计一致", w);
+    }
+
+    /** 单个酒款的可售资格结果（与列表/批次页/销售页同一口径） */
+    @GetMapping("/{id}/sale-eligibility")
+    public ApiResponse<WineSaleStatusService.Eligibility> saleEligibility(@PathVariable Long id) {
+        return ApiResponse.success(saleStatusService.eligibilityOf(id));
     }
 }

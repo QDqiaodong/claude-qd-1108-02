@@ -59,6 +59,11 @@ function tagType(b) {
   return STATUS_TAG[b.status]
 }
 
+// 批次所属酒款是否停售（停售后批次可售展示同步关闭，与酒款台账/销售出窖页同一套资格结果）
+function wineDelisted(b) {
+  return wineMap.value[b.wineId]?.status === '停售'
+}
+
 const emit = defineEmits(['changed'])
 onMounted(load)
 </script>
@@ -80,7 +85,10 @@ onMounted(load)
       <el-card v-for="b in shown" :key="b.id" shadow="hover" class="card">
         <div class="card-head">
           <span class="batch-no">{{ b.batchNo }}</span>
-          <el-tag size="small" :type="tagType(b)">{{ b.status }}</el-tag>
+          <span class="head-tags">
+            <el-tag v-if="wineDelisted(b)" size="small" type="info" effect="dark">酒款停售</el-tag>
+            <el-tag size="small" :type="tagType(b)">{{ b.status }}</el-tag>
+          </span>
         </div>
         <div class="card-body">
           <div class="row"><span class="k">酒款</span><span class="v">{{ wineMap[b.wineId]?.name || '—' }}</span></div>
@@ -107,6 +115,7 @@ onMounted(load)
             :loading="releasing.has(b.id)"
             @click="release(b)"
           >放行可售</el-button>
+          <span v-else-if="b.status === '可售' && wineDelisted(b)" class="muted delisted">酒款停售中 · 暂不进入销售选择（复售后恢复）</span>
           <span v-else-if="b.status === '可售'" class="muted">已放行 · 出窖时按 FIFO 扣减</span>
           <span v-else class="muted">已售罄 · 退窖可回补恢复</span>
         </div>
@@ -141,6 +150,7 @@ onMounted(load)
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
 .card { border-radius: 12px; }
 .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.head-tags { display: flex; gap: 6px; }
 .batch-no { font-weight: 700; color: var(--primary-deep); }
 .card-body { font-size: 13px; }
 .row { display: flex; justify-content: space-between; padding: 3px 0; }
@@ -154,5 +164,6 @@ onMounted(load)
 .b-sub { font-size: 12px; color: var(--muted); margin: 2px 0 6px; }
 .card-foot { margin-top: 12px; }
 .muted { color: var(--muted); font-size: 12px; }
+.delisted { color: #b26a00; }
 .form-note { font-size: 12px; color: var(--muted); padding-left: 80px; line-height: 1.5; }
 </style>

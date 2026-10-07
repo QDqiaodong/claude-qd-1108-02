@@ -19,11 +19,21 @@ const sellableBatchesOf = (wineId) =>
   batches.value
     .filter(b => b.wineId === wineId && b.status === '可售')
     .sort((a, b) => (a.cellarDate < b.cellarDate ? -1 : a.cellarDate > b.cellarDate ? 1 : a.id - b.id))
-const availableOf = (wineId) => sellableBatchesOf(wineId).reduce((s, b) => s + b.availableBottles, 0)
 
-// 可进入出窖选择：在售 + 存在可售批次且有可用瓶数
+// 可售量：优先后端随酒款列表返回的同一套资格结果（= 可售批次可用合计），缺失时本地兜底
+const availableOf = (wineId) => {
+  const w = wineMap.value[wineId]
+  if (w && w.sellableQty !== undefined && w.sellableQty !== null) return w.sellableQty
+  return sellableBatchesOf(wineId).reduce((s, b) => s + b.availableBottles, 0)
+}
+
+// 可进入出窖选择：与酒款列表/批次页同一套资格结果（在售 + 账实一致 + 有可售批次瓶数）
 const sellableWines = computed(() =>
-  wines.value.filter(w => w.status === '在售' && availableOf(w.id) > 0)
+  wines.value.filter(w =>
+    w.saleEligible !== undefined && w.saleEligible !== null
+      ? w.saleEligible
+      : w.status === '在售' && availableOf(w.id) > 0
+  )
 )
 
 async function load() {
@@ -141,7 +151,7 @@ onMounted(load)
 <template>
   <div v-loading="loading">
     <div class="bar">
-      <span class="hint">仅已放行且有可用瓶数的批次可出窖；同一酒款按最早入窖批次优先（FIFO）扣减，实际批次逐行留存</span>
+      <span class="hint">仅通过可售资格（在售 + 账实一致 + 有可售批次瓶数）的酒款可出窖；同一酒款按最早入窖批次优先（FIFO）扣减，实际批次逐行留存</span>
       <el-button type="primary" @click="openCreate">新建出窖</el-button>
     </div>
 
@@ -204,7 +214,7 @@ onMounted(load)
         <el-divider>出窖明细</el-divider>
         <div v-for="(it, i) in items" :key="i" class="item-block">
           <div class="item-row">
-            <el-select v-model="it.wineId" filterable placeholder="仅可选择有放行批次的在售酒款" style="flex:1" @change="onWineChange(it)">
+            <el-select v-model="it.wineId" filterable placeholder="仅可选择通过可售资格核验的酒款" style="flex:1" @change="onWineChange(it)">
               <el-option
                 v-for="w in sellableWines" :key="w.id"
                 :label="`${w.code} ${w.name}（¥${w.price}/可售${availableOf(w.id)}瓶）`"

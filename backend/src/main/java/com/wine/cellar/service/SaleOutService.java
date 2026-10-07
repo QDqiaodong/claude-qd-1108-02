@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.wine.cellar.common.BizException;
+import com.wine.cellar.common.Dict;
 import com.wine.cellar.entity.CellarBatch;
 import com.wine.cellar.entity.Member;
 import com.wine.cellar.entity.SaleOut;
@@ -28,19 +29,22 @@ public class SaleOutService {
     private final WineService wineService;
     private final MemberService memberService;
     private final CellarBatchService batchService;
+    private final WineSaleStatusService saleStatusService;
 
     public SaleOutService(SaleOutRepository saleRepository,
                           SaleOutItemRepository itemRepository,
                           WineRepository wineRepository,
                           WineService wineService,
                           MemberService memberService,
-                          CellarBatchService batchService) {
+                          CellarBatchService batchService,
+                          WineSaleStatusService saleStatusService) {
         this.saleRepository = saleRepository;
         this.itemRepository = itemRepository;
         this.wineRepository = wineRepository;
         this.wineService = wineService;
         this.memberService = memberService;
         this.batchService = batchService;
+        this.saleStatusService = saleStatusService;
     }
 
     // ---------------- 查询 ----------------
@@ -96,24 +100,16 @@ public class SaleOutService {
             member = memberService.get(input.memberId);   // 仅校验存在；真正加锁在扣减完成后
         }
 
-        // 2) 先按酒款 id 升序加行锁并做全部校验（在售 / 账实一致 / 库存充足），
+        // 2) 先按酒款 id 升序加行锁并做全部校验（与前台展示同一套可售资格口径：在售 / 账实一致 / 库存充足），
         //    校验阶段不写任何数据——任何一条明细不满足都整体回滚，绝不留半成功数据。
         List<Long> wineIds = needByWine.keySet().stream().sorted().toList();
         Map<Long, Wine> wineCache = new LinkedHashMap<>();
         BigDecimal total = BigDecimal.ZERO;
         for (Long wineId : wineIds) {
             Wine w = wineService.getLocked(wineId);
-            if (!"在售".equals(w.status)) {
-                throw new BizException("酒款「" + w.name + "」已停售，不可出窖");
-            }
-            int need = needByWine.get(wineId);
-            batchService.assertStockConsistent(w);
-            if (w.stock < need) {
-                throw new BizException("酒款「" + w.name + "」可售瓶数不足（仅剩 "
-                        + w.stock + "，需出窖 " + need + "），本单未扣减任何批次");
-            }
+            saleStatusService.assertSaleable(w, needByWine.get(wineId));
             wineCache.put(wineId, w);
-            total = total.add(w.price.multiply(BigDecimal.valueOf(need)));
+            total = total.add(w.price.multiply(BigDecimal.valueOf(needByWine.get(wineId))));
         }
 
         // 3) 逐酒款按最早入窖批次优先扣减，并为每次实际扣减留存批次明细行
@@ -121,7 +117,7 @@ public class SaleOutService {
         sale.memberId = (member == null) ? null : member.id;
         sale.total = total;
         sale.pointsEarned = 0;
-        sale.status = "已出窖";
+        sale.status = Dict.SALE_OUT_DONE;
         SaleOut saved = saleRepository.save(sale);
 
         for (Long wineId : wineIds) {
@@ -161,7 +157,7 @@ public class SaleOutService {
         // 先锁出窖单并复查状态：拒绝重复退窖与跳跃状态
         SaleOut sale = saleRepository.findLockingById(id)
                 .orElseThrow(() -> new BizException("出窖单不存在"));
-        if (!"已出窖".equals(sale.status)) {
+        if (!Dict.SALE_OUT_DONE.equals(sale.status)) {
             throw new BizException("仅「已出窖」的订单可退窖，当前为「" + sale.status + "」，请勿重复操作");
         }
 
@@ -201,7 +197,7 @@ public class SaleOutService {
             memberService.addPoints(sale.memberId, -sale.pointsEarned);
         }
 
-        sale.status = "已退窖";
+        sale.status = Dict.SALE_OUT_REFUNDED;
         return saleRepository.save(sale);
     }
 }

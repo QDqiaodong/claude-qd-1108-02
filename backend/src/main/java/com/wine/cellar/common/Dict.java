@@ -21,6 +21,10 @@ public final class Dict {
     /** 状态：在售 / 停售 */
     public static final List<String> WINE_STATUS = List.of("在售", "停售");
 
+    /** 酒款状态名 */
+    public static final String WINE_ON_SALE = "在售";
+    public static final String WINE_DELISTED = "停售";
+
     // ---------------- 窖藏批次 cellar_batch ----------------
     /** 窖藏批次状态：窖藏中 / 可售 / 已售罄，逐级推进，不可跳级 */
     public static final List<String> CELLAR_BATCH_STATUS = List.of("窖藏中", "可售", "已售罄");
@@ -45,6 +49,10 @@ public final class Dict {
     // ---------------- 销售出窖 sale_out ----------------
     /** 出窖状态：已出窖 / 已退窖 */
     public static final List<String> SALE_OUT_STATUS = List.of("已出窖", "已退窖");
+
+    /** 出窖状态名（「已出窖」即在途：仍可被退窖冲正，停售/复售前必须核查） */
+    public static final String SALE_OUT_DONE = "已出窖";
+    public static final String SALE_OUT_REFUNDED = "已退窖";
 
     // ---------------- 校验方法 ----------------
 
@@ -78,6 +86,18 @@ public final class Dict {
             return true;
         }
         return BATCH_SOLD_OUT.equals(from) && BATCH_SELLABLE.equals(to);
+    }
+
+    /**
+     * 酒款合法状态转换（拒绝重复提交与非法跳跃）：
+     *   在售 → 停售：停售保护（须无在途业务）
+     *   停售 → 在售：复售（须重新核验批次/库存资格）
+     */
+    public static boolean canTransferWine(String from, String to) {
+        if (WINE_ON_SALE.equals(from) && WINE_DELISTED.equals(to)) {
+            return true;
+        }
+        return WINE_DELISTED.equals(from) && WINE_ON_SALE.equals(to);
     }
 
     public static boolean isValidMemberLevel(String level) {

@@ -140,11 +140,9 @@ public class WineService {
             }
             w.price = input.price;
         }
-        if (input.status != null) {
-            if (!Dict.isValidWineStatus(input.status)) {
-                throw new BizException("状态必须是：在售/停售 之一");
-            }
-            w.status = input.status;
+        if (input.status != null && !input.status.isBlank() && !input.status.equals(w.status)) {
+            // 在售/停售只能经「停售/复售」动作流转（含在途业务与批次资格核验），PUT 一律拒绝，防止绕过保护
+            throw new BizException("酒款在售/停售状态不能手工改写，请使用「停售/复售」业务动作");
         }
         return wineRepository.save(w);
     }

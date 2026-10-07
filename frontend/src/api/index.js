@@ -31,6 +31,10 @@ export default {
   createWine: (d) => call(http.post('/wines', d)),
   updateWine: (id, d) => call(http.put(`/wines/${id}`, d)),
   reconcileWineStock: (id) => call(http.post(`/wines/${id}/reconcile-stock`)),
+  // 停售/复售（含在途业务与批次资格保护，状态只能经此流转）
+  delistWine: (id) => call(http.post(`/wines/${id}/delist`)),
+  relistWine: (id) => call(http.post(`/wines/${id}/relist`)),
+  wineSaleEligibility: (id) => call(http.get(`/wines/${id}/sale-eligibility`)),
 
   // ---------------- 窖藏批次 cellar_batch ----------------
   listCellarBatches: (status) => call(http.get('/cellar-batches', params(status ? { status } : {}))),

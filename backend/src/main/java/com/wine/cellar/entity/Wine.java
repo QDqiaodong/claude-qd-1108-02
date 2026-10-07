@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 @Entity
 @Table(name = "wine")
@@ -41,4 +42,17 @@ public class Wine {
 
     @Column(name = "created_at")
     public LocalDateTime createdAt = LocalDateTime.now();
+
+    // ---------------- 可售资格（后端统一计算，随查询返回；酒款列表/批次页/销售出窖页共用同一套结果） ----------------
+    @Transient
+    public Boolean saleEligible;     // 是否可进入销售选择（在售 + 账实一致 + 有可售批次瓶数）
+
+    @Transient
+    public Integer sellableQty;      // 可售批次可用瓶数合计（前台展示可售量与批次合计一致）
+
+    @Transient
+    public Boolean stockConsistent;  // 库存镜像与可售批次合计是否一致
+
+    @Transient
+    public String saleBlockReason;   // 不可售原因（可售时为 null）
 }
